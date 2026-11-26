@@ -1,0 +1,170 @@
+name: sistema-finance
+
+# A service is a container role, not a separate image. Keeping the image names
+# here makes that distinction explicit and prevents equivalent services from
+# being tagged as different images by Compose.
+x-images:
+  backend: &backend-image sistema-finance-backend:dev
+  postgres: &postgres-image postgres:17-alpine
+
+services:
+  api:
+    image: *backend-image
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    command: sh -c "npm run build && exec node dist/main.js"
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./src       # Caminho na sua máquina local
+          target: /app/src  # Caminho correspondente dentro do contêiner
+          initial_sync: true
+        - action: rebuild
+          path: package.json
+        - action: rebuild
+          path: package-lock.json
+        - action: rebuild
+          path: nest-cli.json
+        - action: rebuild
+          path: tsconfig.json
+        - action: rebuild
+          path: tsconfig.build.json
+    init: true
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      PORT: 3333
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      # Do not expose the migration owner credentials to the runtime container.
+      POSTGRES_USER: migration-owner-not-available-at-runtime
+      POSTGRES_PASSWORD: unused-at-runtime
+      POSTGRES_APP_USER: ${POSTGRES_APP_USER:-finance_app}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:-finance_app_local_password}
+      POSTGRES_DB: ${POSTGRES_DB:-finance}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-local-only-access-secret-change-before-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-local-only-refresh-secret-change-before-production}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-30d}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      REDIS_HOST: redis-finance
+      REDIS_PORT: 6379
+      RABBITMQ_URI: amqp://dev:dev@rabbitmq-finance:5672
+    ports:
+      - "${PORT:-3333}:3333"
+    volumes:
+      - api_uploads:/app/uploads
+    depends_on:
+      postgres-role-init:
+        condition: service_completed_successfully
+      redis-finance:
+        condition: service_healthy
+      rabbitmq-finance:
+        condition: service_healthy
+    networks:
+      - rabbitmq_finance_net
+
+  migrate:
+    image: *backend-image
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    command: npm run migration:run
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-local_dev_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-finance}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - rabbitmq_finance_net
+
+  # One-shot psql client. It reuses the PostgreSQL image but is not another
+  # database; it exits after granting the runtime role access to migrated data.
+  postgres-role-init:
+    image: *postgres-image
+    command: ["psql", "-v", "ON_ERROR_STOP=1", "-f", "/provision/provision-app-role.sql"]
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-finance}
+      PGUSER: ${POSTGRES_USER:-local_dev_user}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-local_dev_password}
+      POSTGRES_APP_USER: ${POSTGRES_APP_USER:-finance_app}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:-finance_app_local_password}
+    volumes:
+      - ./src/infrastructure/persistence/postgres/provision-app-role.sql:/provision/provision-app-role.sql:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - rabbitmq_finance_net
+
+  rabbitmq-finance:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq-finance
+    environment:
+      - RABBITMQ_DEFAULT_USER=dev
+      - RABBITMQ_DEFAULT_PASS=dev
+    ports:
+      - 5672:5672
+      - 15672:15672
+    volumes:
+      - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/
+      - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
+    networks:
+      - rabbitmq_finance_net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+
+  redis-finance:
+    image: redis:7-alpine
+    container_name: redis-finance
+    ports:
+      - 6379:6379
+    volumes:
+      - ~/.docker-conf/redis/data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - rabbitmq_finance_net
+
+  # The only PostgreSQL server. Its data persists in postgres_data.
+  postgres:
+    image: *postgres-image
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-local_dev_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-finance}
+    ports: ["127.0.0.1:${POSTGRES_PORT:-55432}:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - rabbitmq_finance_net
+
+volumes:
+  postgres_data:
+  api_uploads:
+
+networks:
+  rabbitmq_finance_net:
+    driver: bridge

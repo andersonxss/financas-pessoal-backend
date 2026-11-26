@@ -1,0 +1,24 @@
+{
+  "moduleFileExtensions": [
+    "js",
+    "json",
+    "ts"
+  ],
+  "rootDir": ".",
+  "testRegex": ".*\\.spec\\.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "testEnvironment": "node",
+  "moduleNameMapper": {
+    "^@errors$": "<rootDir>/src/domain/errors",
+    "^@errors/(.*)$": "<rootDir>/src/domain/errors/$1",
+    "^@repositories$": "<rootDir>/src/domain/repositories",
+    "^@repositories/(.*)$": "<rootDir>/src/domain/repositories/$1",
+    "^@events$": "<rootDir>/src/domain/events",
+    "^@events/(.*)$": "<rootDir>/src/domain/events/$1",
+    "^@entities$": "<rootDir>/src/domain/entities",
+    "^@entities/(.*)$": "<rootDir>/src/domain/entities/$1",
+    "^@value-objects/(.*)$": "<rootDir>/src/domain/value-objects/$1"
+  }
+}

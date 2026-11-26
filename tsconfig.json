@@ -1,0 +1,84 @@
+{
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "resolvePackageJsonExports": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2023",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "paths": {
+      "@entities": [
+        "src/domain/entities"
+      ],
+      "@errors": [
+        "src/domain/errors"
+      ],
+      "@repositories": [
+        "src/domain/repositories"
+      ],
+      "@events": [
+        "src/domain/events"
+      ],
+      "@value-objects/*": [
+        "src/domain/value-objects/*"
+      ],
+      "@domain/services": [
+        "src/domain/services"
+      ],
+      "@commands": [
+        "src/application/commands/"
+      ],
+      "@dtos": [
+        "src/application/dtos"
+      ],
+      "@queries": [
+        "src/application/queries"
+      ],
+      "@application/enums": [
+        "src/application/enums"
+      ],
+      "@application/utils": [
+        "src/application/utils"
+      ],
+      "@infrastructure/messaging": [
+        "src/infrastructure/messaging"
+      ],
+      "@controllers": [
+        "src/infrastructure/http/controllers"
+      ],
+      "@persistence": [
+        "src/infrastructure/persistence"
+      ],
+      "@infrastructure/config": [
+        "src/infrastructure/config"
+      ],
+      "@infrastructure/constants": [
+        "src/infrastructure/constants"
+      ],
+      "@infrastructure/ai": [
+        "src/infrastructure/ai"
+      ],
+      "@infrastructure/ai/google": [
+        "src/infrastructure/ai/google"
+      ],
+      "@multer": [
+        "src/infrastructure/http/multer"
+      ]
+    },
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "noFallthroughCasesInSwitch": false
+  }
+}
