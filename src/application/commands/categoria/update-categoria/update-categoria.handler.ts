@@ -14,12 +14,10 @@ export class UpdateCategoriaHandler implements ICommandHandler<UpdateCategoriaCo
 
     async execute(command: UpdateCategoriaCommand): Promise<Categoria> {
         let { id, name, status_id } = command;
-
         const categoriaExists = await this.repository.findById(id);
         if (!categoriaExists) {
             throw new CategoriaNotFound();
         }
-
         const categoria = new Categoria(id, name, status_id);
         return await this.repository.update(categoria);
     }

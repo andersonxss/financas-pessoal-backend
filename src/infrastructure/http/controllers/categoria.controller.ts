@@ -35,6 +35,7 @@ export class CategoriaController {
     @HttpCode(200)
     async update(@Param('id') id: string, @Body() dto: UpdateCategoriaDto) {
         try {
+         
             const status = await this.commandBus.execute(
                 new UpdateCategoriaCommand(id, dto.name, dto.status_id)
             );

@@ -11,19 +11,19 @@ import {
 export class UpdateReceitasDto {
 	@IsString()
 	@IsNotEmpty()
-	descricao: string;
+	descricao!: string;
 
 	@IsNumber({ allowNaN: false, allowInfinity: false, maxDecimalPlaces: 2 })
 	@Min(-99999999.99)
 	@Max(99999999.99)
-	valor: number;
+	valor!: number;
 
 	@IsDateString({ strict: true })
-	recebimento: string;
+	recebimento!: string;
 
 	@IsUUID()
-	categoria_id: string;
+	categoria_id!: string;
 
 	@IsUUID()
-	status_id: string;
+	status_id!: string;
 }
